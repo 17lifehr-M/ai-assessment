@@ -444,9 +444,9 @@ function handleConfirm() {
   console.log('handleConfirm called: mode=' + btnMode + ' qIdx=' + (testState ? testState.qIdx : '?'));
   updateDebug();
   if (btnMode === 'section') {
-    // 推進 qIdx 到 21（第 1 道問答題），避免 renderQ 再次觸發 section divider
-    testState.showingSection = false;
-    testState.qIdx++;
+    // 標記 section 已顯示過，qIdx 維持 20
+    // renderQ 判斷 showingSection=true 時不再觸發 divider，直接渲染 essay[0]
+    testState.showingSection = true;   // 維持 true，讓 renderQ 不再觸發 divider
     btnMode = 'essay';
     renderQ();
   } else if (btnMode === 'mcq') {
