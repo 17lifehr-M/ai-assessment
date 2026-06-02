@@ -251,7 +251,7 @@ tr:hover td{background:var(--paper2)}
           <h3>最近測驗紀錄</h3>
           <button class="btn-secondary btn-sm no-print" onclick="refreshAll()">🔄 重新整理</button>
         </div>
-        <table><thead><tr><th>姓名</th><th>應徵職務</th><th>職類</th><th>面試日期</th><th>選擇題</th><th>操作</th></tr></thead>
+        <table><thead><tr><th>姓名</th><th>應徵職務</th><th>職類</th><th id="dash-sort-date" onclick="sortRecords('date')" style="cursor:pointer;user-select:none">面試日期 ⇅</th><th>選擇題</th><th id="dash-sort-testDate" onclick="sortRecords('testDate')" style="cursor:pointer;user-select:none">測驗日期時間 ⇅</th><th>操作</th></tr></thead>
         <tbody id="dash-table-body"></tbody></table>
       </div>
     </div>
@@ -268,7 +268,7 @@ tr:hover td{background:var(--paper2)}
           </div>
           <button class="btn-secondary btn-sm no-print" onclick="refreshAll()">🔄 重新整理</button>
         </div>
-        <table><thead><tr><th>姓名</th><th>電話</th><th>應徵職務</th><th>職類</th><th>面試日期</th><th>選擇題</th><th>作答時間</th><th>操作</th></tr></thead>
+        <table><thead><tr><th>姓名</th><th>電話</th><th>應徵職務</th><th>職類</th><th id="sort-date" onclick="sortRecords('date')" style="cursor:pointer;user-select:none">面試日期 ⇅</th><th>選擇題</th><th>作答時間</th><th id="sort-testDate" onclick="sortRecords('testDate')" style="cursor:pointer;user-select:none">測驗日期時間 ⇅</th><th>操作</th></tr></thead>
         <tbody id="rec-table-body"></tbody></table>
         <div id="rec-empty" style="padding:40px;text-align:center;color:var(--ink3);display:none">尚無測驗紀錄</div>
       </div>
@@ -482,6 +482,7 @@ async function loadAdminUI(){
   document.getElementById('cfg-url').value=HARDCODED_AI_URL;
   document.getElementById('current-url-display').textContent='目前連線（內建）：'+HARDCODED_AI_URL;
   await refreshAll();
+  updateSortHeaders();
 }
 async function refreshAll(){
   setLoading(true,'同步試算表資料…');
@@ -535,10 +536,48 @@ function renderStats(){
 // ══════════════════════════════════
 // DASHBOARD TABLE
 // ══════════════════════════════════
+// ── 排序功能 ──────────────────────────────────────────────────────
+let sortField = 'testDate';
+let sortAsc   = false;
+
+function sortRecords(field) {
+  if (sortField === field) { sortAsc = !sortAsc; }
+  else { sortField = field; sortAsc = false; }
+  renderRecords();
+  renderDashTable();
+  updateSortHeaders();
+}
+
+function getSortedRecords(records) {
+  return [...records].sort(function(a, b) {
+    var va = String(a[sortField] || '');
+    var vb = String(b[sortField] || '');
+    var cmp = va.localeCompare(vb, 'zh-TW');
+    return sortAsc ? cmp : -cmp;
+  });
+}
+
+function updateSortHeaders() {
+  var fields = {
+    'sort-date':          '面試日期',
+    'sort-testDate':      '測驗日期時間',
+    'dash-sort-date':     '面試日期',
+    'dash-sort-testDate': '測驗日期時間'
+  };
+  Object.keys(fields).forEach(function(id) {
+    var th = document.getElementById(id);
+    if (!th) return;
+    var f = id.replace('dash-sort-','').replace('sort-','');
+    var arrow = sortField === f ? (sortAsc ? ' ▲' : ' ▼') : ' ⇅';
+    th.textContent = fields[id] + arrow;
+  });
+}
+// ──────────────────────────────────────────────────────────────────
+
 function renderDashTable(){
-  const recent=[...allRecords].reverse().slice(0,8);
+  const recent=getSortedRecords(allRecords).slice(0,8);
   const tb=document.getElementById('dash-table-body');
-  if(!recent.length){tb.innerHTML='<tr><td colspan="6" style="text-align:center;color:var(--ink3);padding:32px">尚無紀錄</td></tr>';return}
+  if(!recent.length){tb.innerHTML='<tr><td colspan="7" style="text-align:center;color:var(--ink3);padding:32px">尚無紀錄</td></tr>';return}
   tb.innerHTML=recent.map(r=>`
     <tr>
       <td><strong>${r.name}</strong></td>
@@ -546,6 +585,7 @@ function renderDashTable(){
       <td><span class="tag" style="background:var(--accent-light);color:var(--accent)">${r.role}</span></td>
       <td>${formatDate(r.date)}</td>
       <td><span style="font-family:'JetBrains Mono',monospace;font-weight:500">${r.mcqCorrect||0}/20</span></td>
+      <td style="font-size:12px;color:var(--ink3);white-space:nowrap">${r.testDate ? r.testDate : '<span style="color:#bbb">未記錄</span>'}</td>
       <td><button class="btn-secondary btn-sm" onclick="openReport(${r._sheetRow})">查看報告</button></td>
     </tr>`).join('');
 }
@@ -555,7 +595,7 @@ function renderDashTable(){
 // ══════════════════════════════════
 function renderRecords(){
   const kw=(document.getElementById('rec-search').value||'').toLowerCase();
-  const filtered=[...allRecords].reverse().filter(r=>r.name.includes(kw)||r.job.includes(kw));
+  const filtered=getSortedRecords(allRecords).filter(r=>r.name.includes(kw)||r.job.includes(kw));
   const tb=document.getElementById('rec-table-body');
   const empty=document.getElementById('rec-empty');
   if(!filtered.length){tb.innerHTML='';empty.style.display='block';return}
@@ -570,6 +610,7 @@ function renderRecords(){
       <td><span style="font-family:'JetBrains Mono',monospace;font-weight:500">${r.mcqCorrect||0}/20</span>
           <span style="font-size:11px;color:var(--ink3);margin-left:4px">(基${r.basicCorrect}/中${r.midCorrect}/高${r.hardCorrect})</span></td>
       <td style="font-size:13px;color:var(--ink3)">${r.elapsed}</td>
+      <td style="font-size:12px;color:var(--ink3);white-space:nowrap">${r.testDate ? r.testDate : '<span style="color:#bbb">未記錄</span>'}</td>
       <td style="white-space:nowrap">
         <button class="btn-secondary btn-sm" style="margin-right:6px" onclick="openReport(${r._sheetRow})">📄 報告</button>
         <button class="btn-danger btn-sm" onclick="deleteRecord(${r._sheetRow})">刪除</button>
