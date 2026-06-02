@@ -243,8 +243,6 @@ tr:hover td{background:var(--paper2)}
       <div class="stat-grid">
         <div class="stat-card"><div class="sc-val" id="stat-total">—</div><div class="sc-lbl">總測驗人數</div></div>
         <div class="stat-card"><div class="sc-val" id="stat-today">—</div><div class="sc-lbl">今日測驗</div></div>
-        <div class="stat-card"><div class="sc-val" id="stat-avg-score">—</div><div class="sc-lbl">平均選擇題得分</div></div>
-        <div class="stat-card"><div class="sc-val" id="stat-avg-time">—</div><div class="sc-lbl">平均作答時間</div></div>
       </div>
       <div class="table-wrap">
         <div class="table-head">
@@ -520,17 +518,16 @@ function formatDate(d){
 function renderStats(){
   document.getElementById('stat-total').textContent=allRecords.length;
   const today=new Date().toLocaleDateString('zh-TW');
-  const todayN=allRecords.filter(r=>{try{return new Date(r.testDate).toLocaleDateString('zh-TW')===today}catch{return false}}).length;
+  const todayN=allRecords.filter(r=>{
+    try{
+      if(!r.testDate) return false;
+      const datePart = r.testDate.split(' ')[0];
+      const d = new Date(datePart.replace(/\//g,'-'));
+      return d.toLocaleDateString('zh-TW')===today;
+    }catch{return false}
+  }).length;
   document.getElementById('stat-today').textContent=todayN;
-  if(allRecords.length){
-    const avgScore=Math.round(allRecords.reduce((s,r)=>s+(r.mcqCorrect||0),0)/allRecords.length);
-    document.getElementById('stat-avg-score').textContent=avgScore+' / 20';
-    const avgSec=allRecords.reduce((s,r)=>{
-      const m=String(r.elapsed||'').match(/(\d+)分(\d+)秒/);
-      return s+(m?parseInt(m[1])*60+parseInt(m[2]):0);
-    },0)/allRecords.length;
-    document.getElementById('stat-avg-time').textContent=Math.floor(avgSec/60)+'分'+Math.round(avgSec%60)+'秒';
-  }
+
 }
 
 // ══════════════════════════════════
