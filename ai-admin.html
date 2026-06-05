@@ -742,7 +742,7 @@ async function downloadPDF(){
     }
     const r=allRecords.find(x=>document.getElementById('modal-report-body').innerHTML.includes(x.name));
     const name=r?r.name.substring(0,10):'AI測驗報告';
-    pdf.save(name+'_AI測驗報告_'+new Date().toISOString().slice(0,10)+'.pdf');
+    pdf.save(name+'_AI測驗報告.PDF');
     showToast('PDF 已下載','success');
   }catch(e){showToast('PDF 產生失敗：'+e.message,'error');console.error(e);}
   finally{btn.innerHTML=orig;btn.disabled=false;}
